@@ -29,6 +29,7 @@
 #include "DefineVal.h"
 #include "Md5.h"
 #define eps 1e-8
+#define BUFFER_SIZE 1024
 
 using namespace std;
 
@@ -77,6 +78,7 @@ int listenInit(){
 }
 
 void sendCmd(int sockfd, const void *buffer, size_t len, int flags){
+    std::cout << string(static_cast<const char*>(buffer)) << std::endl;
     if(send(sockfd, buffer, len, flags) < 0){
 #ifdef DEBUG
         std:: cout << "send cmd error" << std::endl;
@@ -88,28 +90,60 @@ int main(){
     cout << "client start" << endl;
     int sockfd = listenInit();
 
+    string filename = "Md5.h";
+    FILE *fp = fopen(filename.c_str(),"r");
+    if(fp == NULL){
+        cout << filename << "not found" << endl;
+        exit(-1);
+    }
+
+    cout << "client Md5 = " << md5file(filename.c_str()) << endl;
+
     //send transfer file msg
-    string transferFileMsg = "7E4500007E";
-    sendCmd(sockfd, transferFileMsg.c_str(), transferFileMsg.size(), 0);
+//    string transferFileMsg = "7E4500007E";
+//    sendCmd(sockfd, transferFileMsg.c_str(), transferFileMsg.size(), 0);
 
-//    while(10){
-//        sendCmd(sockfd, "112134,", 8, 0);
-//        sleep(1);
+
+
+
+    int fileBlockLen = 0;
+    char buf[BUFFER_SIZE];
+//    bzero(buf, sizeof(buf));
+//
+//    read(sockfd, buf, BUFFER_SIZE);
+//
+//    cout << "recv = " << buf << endl;
+    bzero(buf,sizeof(buf));
+    while((fileBlockLen = fread(buf, sizeof(char), BUFFER_SIZE, fp)) > 0){
+        sendCmd(sockfd, buf, fileBlockLen, 0);
+        usleep(6);
+        bzero(buf, sizeof(buf));
+    }
+
+    fclose(fp);
+    close(sockfd);
+
+//
+//    string endFileMsg = "7E4511117E";
+//    sendCmd(sockfd, endFileMsg.c_str(), endFileMsg.size(), 0);
+//    close(sockfd);
+
+
+
+//    pid_t p;
+//    int status;
+//    if((p = fork()) == 0){
+//        close(1);
+//        dup(sockfd);
+//
+//        execl("/bin/cat", "/bin/cat", "1.rmvb", NULL);
+//        exit(0);
 //    }
-    pid_t p;
-    int status;
-    if((p = fork()) == 0){
-        close(1);
-        dup(sockfd);
-
-        execl("/bin/cat", "/bin/cat", "1.rmvb", NULL);
-        exit(0);
-    }
-    else{
-        wait(&status);
-    }
-
-    sleep(1);
+//    else{
+//        wait(&status);
+//    }
+//
+//    sleep(1);
 
     /*calculate Md5*/
 //    string strMd5 = md5file("makefile");
